@@ -86,7 +86,7 @@ def get_concurrent_reservations(reservation):
         return total_reservations
 
 
-def is_asset_bookable(user, asset, availability, reservation_begins, reservation_ends):
+def is_asset_bookable(user, asset, availability, reservation_begins, reservation_ends, is_modification=False):
     """This method checks if there is possible to create a new reservation
     with the given parameters.
     It returns a tuple whose first parameter is a boolean which specifies if
@@ -110,11 +110,12 @@ def is_asset_bookable(user, asset, availability, reservation_begins, reservation
     if reservation_begins.date() < availability.available_from or reservation_ends.date() > availability.available_to:
         return (False, _('The specified time is not in the bookable period.'))
 
-    course = availability.kq.unit.course
-    if user_course_get_pending_reservations(user, course).count() >= course.max_reservations_pending:
-        return (False, _('You have reached the pending reservations limit for this course.'))
-    elif user_course_get_reservations(user, course).count() >= course.max_reservations_total:
-        return (False, _('You have reached the reservations limit for this course.'))
+    if not is_modification:
+        course = availability.kq.unit.course
+        if user_course_get_pending_reservations(user, course).count() >= course.max_reservations_pending:
+            return (False, _('You have reached the pending reservations limit for this course.'))
+        elif user_course_get_reservations(user, course).count() >= course.max_reservations_total:
+            return (False, _('You have reached the reservations limit for this course.'))
 
     collisions = Reservation.objects.filter(asset__id=asset.id)
     collisions = collisions.exclude(Q(reservation_begins__gte=reservation_ends)
